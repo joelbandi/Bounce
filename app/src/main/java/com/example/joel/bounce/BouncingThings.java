@@ -4,11 +4,14 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 
 /**
  * Created by joel on 3/20/16.
  */
+
+
 public class BouncingThings extends View {
 
     // drawing resources
@@ -16,65 +19,44 @@ public class BouncingThings extends View {
     Paint green = new Paint();
 
     //other miscellanous vars
-    boolean one;
     boolean collision;
-    int tx,ty;
+    int tempx, tempy;
     int pers = 10;
-
-    // cyan ball (1) vars
-    float posx1;
-    float posy1;
     boolean x1;
     boolean y1;
-    float radius1;
-    float speedx1,speedy1;
-
-    // green ball (2) vars;
-
-    float posx2;
-    float posy2;
     boolean x2;
     boolean y2;
-    float radius2;
-    float speedx2,speedy2;
 
 
 
-    public void init1(){
+
+    Ball greenball;
+    Ball cyanball;
+
+
+    public void init(){
         cyan.setColor(Color.CYAN);
         cyan.setStyle(Paint.Style.FILL_AND_STROKE);
         cyan.setAntiAlias(true);
-        posx1 =150f;
-        posy1 =150f;
-        x1=y1=true;
-        radius1 = 100f;
-        speedx1= 5;
-        speedy1=5;
-    }
+        cyanball = new Ball(150f,150f,5,5,100f,cyan);
 
-
-    public void init2(){
         green.setColor(Color.GREEN);
         green.setStyle(Paint.Style.FILL_AND_STROKE);
         green.setAntiAlias(true);
-        one = true;
-        x2=y2=true;
-        radius2 = 125f;
-        speedx2 = 6;
-        speedy2 = 5;
+        greenball = new Ball(350f,350f,6,5,150f,green);
+
+        x1=y1=x2=y2=true;
     }
+
 
 
     public BouncingThings(Context context) {
         super(context);
-
-
-        init1();
-        init2();
+        init();
     }
 
 
-    public float distance(double x1, double y1, double x2, double y2){
+    public float distanceBetweenBalls(double x1, double y1, double x2, double y2){
 
         return (float)Math.sqrt((Math.pow((x1-x2),2.0)+Math.pow((y1-y2),2.0)));
 
@@ -83,32 +65,37 @@ public class BouncingThings extends View {
 
     public void onCollide(){
 
-        tx = (int) speedx1;
-        ty = (int) speedy1;
-        speedx1 = (speedx1 * (radius1 - radius1) + (2 * radius1 * speedx2))/(radius1 + radius1);
-        speedy1 = (speedy1 * (radius1 - radius1) + (2 * radius1 * speedy2))/(radius1 + radius1);
-        speedx2 = (speedx2 * (radius1 - radius1) + (2 * radius1 * tx))/(radius1 + radius1);
-        speedy2 = (speedy2 * (radius1 - radius1) + (2 * radius1 * ty))/(radius1 + radius1);
-        posx1 += speedx1;
-        posy1 += speedy1;
-        posx2 +=speedx2;
-        posy2 +=speedy2;
 
-        if(speedx1>pers){
-            speedx1 = pers;
-        }
-        if(speedx2>pers){
-            speedx2 = pers;
-        }
-        if(speedy1>pers){
-            speedy1 = pers;
-        }
-        if(speedy2>pers){
-            speedy2 = pers;
-        }
+        tempx = (int) cyanball.speedx;
+        tempy = (int) cyanball.speedy;
 
 
+        // using equations derived from law of conservation of momentum and energy : modeled after perfect Elastic collisions of objects of different masses
+        // for simplicity ive assumed density of the two balls same and mass is proportional to radius instead of radius^3
 
+        cyanball.speedx = (cyanball.speedx * (cyanball.radius - greenball.radius) + (2 * greenball.radius * greenball.speedx))/(greenball.radius + cyanball.radius);
+        cyanball.speedy = (cyanball.speedy * (cyanball.radius - greenball.radius) + (2 * greenball.radius * greenball.speedy))/(greenball.radius + cyanball.radius);
+        greenball.speedx = (greenball.speedx * (greenball.radius - cyanball.radius) + (2 * cyanball.radius * tempx))/(greenball.radius + cyanball.radius);
+        greenball.speedy = (greenball.speedy * (greenball.radius - cyanball.radius) + (2 * cyanball.radius * tempy))/(greenball.radius + cyanball.radius);
+        cyanball.posx += cyanball.speedx;
+        cyanball.posy += cyanball.speedy;
+        greenball.posx +=greenball.speedx;
+        greenball.posy +=greenball.speedy;
+
+
+        // capping the speeds to a max level to maintain persistance defined by variable pers
+        if(cyanball.speedx>pers){
+            cyanball.speedx = pers;
+        }
+        if(greenball.speedx>pers){
+            greenball.speedx = pers;
+        }
+        if(cyanball.speedy>pers){
+            cyanball.speedy = pers;
+        }
+        if(greenball.speedy>pers){
+            greenball.speedy = pers;
+        }
 
 
     }
@@ -120,19 +107,14 @@ public class BouncingThings extends View {
         super.onDraw(canvas);
 
 
-        //this is an evil hack  - please ignore
-
-        if(one){
-            posx2 = canvas.getWidth()-radius2-5;
-            posy2 = canvas.getHeight()-radius2-5;
-            one = false;
-        }
-
         //drawing ball 1
-        canvas.drawCircle(posx1, posy1,radius1,cyan);
-        canvas.drawCircle(posx2, posy2,radius2,green);
+//        canvas.drawCircle(posx1, posy1,radius1,cyan);
+//        canvas.drawCircle(posx2, posy2,radius2,green);
 
-        if(distance((float) posx1, (float) posy1, (float) posx2, (float) posy2)<=(radius2+radius1)){
+        cyanball.render(canvas);
+        greenball.render(canvas);
+
+        if(distanceBetweenBalls(cyanball.posx,  cyanball.posy,  greenball.posx,  greenball.posy)<=(cyanball.radius+greenball.radius)){
             collision = true;
             onCollide();
             invalidate();
@@ -142,32 +124,32 @@ public class BouncingThings extends View {
 
 
 
-        updateBall1(canvas,collision);
-        updateBall2(canvas,collision);
+        updateCyanBall(canvas, collision);
+        updateGreenBall(canvas, collision);
         invalidate();
 
     }
 
 
-    public void updateBall1(Canvas canvas,boolean collision){
+    public void updateCyanBall(Canvas canvas, boolean collision){
 
 
 
         // x animation
-        if(posx1 + radius1 >=canvas.getWidth()){
+        if(cyanball.posx + cyanball.radius >=canvas.getWidth()){
             if(x1) {
-                speedx1 = -speedx1;
+                cyanball.speedx = -cyanball.speedx;
                 x1 = false;
             }
-            posx1 += speedx1 - 5;
-        }else if(posx1 - radius1 <=0){
+            cyanball.posx += cyanball.speedx - 5;
+        }else if(cyanball.posx - cyanball.radius <=5){
             if(x1) {
-                speedx1 = -speedx1;
+                cyanball.speedx = -cyanball.speedx;
                 x1 =false;
             }
-            posx1 += speedx1;
+            cyanball.posx += cyanball.speedx;
         } else{
-            posx1 += speedx1;
+            cyanball.posx += cyanball.speedx;
             x1 = true;
         }
 
@@ -176,20 +158,20 @@ public class BouncingThings extends View {
 
         // y animation
 
-        if(posy1 + radius1 >=canvas.getHeight()){
+        if(cyanball.posy + cyanball.radius >=canvas.getHeight()){
             if(y1) {
-                speedy1 = -speedy1;
+                cyanball.speedy = -cyanball.speedy;
                 y1 = false;
             }
-            posy1 += speedy1 - 5;
-        }else if(posy1 - radius1 <=0){
+            cyanball.posy += cyanball.speedy - 5;
+        }else if(cyanball.posy - cyanball.radius <=5){
             if(y1) {
-                speedy1 = -speedy1;
+                cyanball.speedy = -cyanball.speedy;
                 y1 = false;
             }
-            posy1 += speedy1;
+            cyanball.posy += cyanball.speedy;
         }else{
-            posy1 += speedy1;
+            cyanball.posy += cyanball.speedy;
             y1 = true;
         }
 
@@ -198,24 +180,24 @@ public class BouncingThings extends View {
     }
 
 
-    public void updateBall2(Canvas canvas,boolean collision){
+    public void updateGreenBall(Canvas canvas, boolean collision){
 
 
         // x animation
-        if(posx2 + radius2 >=canvas.getWidth()){
+        if(greenball.posx + greenball.radius >=canvas.getWidth()){
             if(x2) {
-                speedx2 = -speedx2;
+                greenball.speedx = -greenball.speedx;
                 x2= false;
             }
-            posx2 += speedx2;
-        }else if(posx2 - radius2 <=0){
+            greenball.posx += greenball.speedx;
+        }else if(greenball.posx - greenball.radius <=5){
             if(x2) {
-                speedx2 = -speedx2;
+                greenball.speedx = -greenball.speedx;
                 x2 = false;
             }
-            posx2 += speedx2;
+            greenball.posx += greenball.speedx;
         } else{
-            posx2 += speedx2;
+            greenball.posx += greenball.speedx;
             x2 = true;
         }
 
@@ -224,20 +206,20 @@ public class BouncingThings extends View {
 
         // y animation
 
-        if(posy2 + radius2 >=canvas.getHeight()){
+        if(greenball.posy + greenball.radius >=canvas.getHeight()){
             if(y2) {
-                speedy2 = -speedy2;
+                greenball.speedy = -greenball.speedy;
                 y2 = false;
             }
-            posy2 += speedy2;
-        }else if(posy2 - radius2 <=0){
+            greenball.posy += greenball.speedy;
+        }else if(greenball.posy - greenball.radius <=5){
             if(y2) {
-                speedy2 = -speedy2;
+                greenball.speedy = -greenball.speedy;
                 y2  = false;
             }
-            posy2 += speedy2;
+            greenball.posy += greenball.speedy;
         }else{
-            posy2 += speedy2;
+            greenball.posy += greenball.speedy;
             y2 = true;
         }
 
